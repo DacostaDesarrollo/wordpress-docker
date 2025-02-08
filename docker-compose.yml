@@ -1,0 +1,71 @@
+version: "3.8"
+
+services:
+  wordpress:
+    build: .
+    container_name: wordpress_app
+    restart: always
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wpuser
+      WORDPRESS_DB_PASSWORD: wppassword
+      WORDPRESS_DB_NAME: wpdatabase
+      WP_HOME: http://localhost
+      WP_SITEURL: http://localhost
+    volumes:
+      - .:/var/www/html
+    networks:
+      - wp_network
+
+  db:
+    image: mysql:8.0
+    container_name: wordpress_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wpdatabase
+      MYSQL_USER: wpuser
+      MYSQL_PASSWORD: wppassword
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - wp_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: wordpress_phpmyadmin
+    restart: always
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "8080:80"
+    networks:
+      - wp_network
+
+  nginx:
+    image: nginx:latest
+    container_name: wordpress_nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www/html
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - wordpress
+    networks:
+      - wp_network
+
+volumes:
+  db_data:
+  wordpress_data:
+
+networks:
+  wp_network:
+    driver: bridge
